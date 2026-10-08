@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171714">
+  <meta name="description" content="Локальная мастерская игровых диалогов поверх изображений.">
+  <title>Искра — мастерская диалогов</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Искра"><span class="brand-mark">✳</span><span>искра<span class="brand-period">.</span></span></a>
+    <span class="privacy"><span class="privacy-dot"></span> Изображения остаются в браузере</span>
+    <div class="top-actions">
+      <button class="button button-quiet" id="exportOne" type="button" disabled>PNG текущего</button>
+      <button class="button button-quiet" id="copyOne" type="button" disabled title="Скопировать обработанный текущий кадр как PNG">Копировать PNG</button>
+      <button class="button button-export" id="exportZip" type="button" disabled>Скачать ZIP <span id="zipCount">0</span></button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="editor" aria-label="Параметры сцены">
+      <div class="editor-heading">
+        <span class="eyebrow">ВАША ИСТОРИЯ</span>
+        <h1>Добавим сцене<br><em>свои слова.</em></h1>
+        <p>Загрузите кадры, выберите нужный и оформите каждый отдельно.</p>
+      </div>
+      <label class="upload-button" for="imageInput">
+        <span class="upload-icon" aria-hidden="true">↥</span>
+        <span><strong>Добавить изображения</strong><small>PNG, JPG или WEBP · можно несколько · Ctrl+V</small></span>
+        <span class="upload-arrow" aria-hidden="true">↗</span>
+      </label>
+      <input id="imageInput" type="file" accept="image/*" multiple hidden>
+
+      <div class="image-summary" id="imageSummary">Сначала добавьте хотя бы один кадр</div>
+
+      <section class="editor-group">
+        <div class="group-heading">
+          <label class="group-enable" title="Показывать диалог на кадре"><input id="dialogueEnabled" type="checkbox" checked aria-label="Показывать диалог"><span class="checkmark"></span></label>
+          <button class="group-toggle" id="dialogueToggle" type="button" aria-expanded="true" aria-controls="dialogueFields"><span>Диалог</span><span class="chevron" aria-hidden="true"></span></button>
+        </div>
+        <div class="group-fields" id="dialogueFields">
+          <label class="mode-select-label" for="dialogueMode">ФОРМАТ СЦЕНЫ</label>
+          <select id="dialogueMode" class="mode-select"><option value="single">Один персонаж</option><option value="dual">Два персонажа</option></select>
+          <div id="singleFields">
+            <label class="field-label" for="speakerInput">ИМЯ ПЕРСОНАЖА</label>
+            <div class="input-row"><input id="speakerInput" type="text" maxlength="36" placeholder="Например, Паймон" autocomplete="off"></div>
+            <label class="field-label dialogue-label" for="dialogueInput">РЕПЛИКА</label>
+            <textarea id="dialogueInput" rows="3" maxlength="280" placeholder="Что происходит в этой сцене?"></textarea>
+          </div>
+          <div id="dualFields" hidden>
+            <label class="field-label" for="speakerTwoInput">ИМЯ СЛЕВА</label>
+            <input id="speakerTwoInput" type="text" maxlength="36" placeholder="Персонаж слева" autocomplete="off">
+            <label class="field-label dialogue-label" for="dialogueTwoInput">РЕПЛИКА СЛЕВА</label>
+            <textarea id="dialogueTwoInput" rows="3" maxlength="280" placeholder="Слова персонажа слева"></textarea>
+            <label class="field-label" for="speakerThreeInput">ИМЯ СПРАВА</label>
+            <input id="speakerThreeInput" type="text" maxlength="36" placeholder="Персонаж справа" autocomplete="off">
+            <label class="field-label dialogue-label" for="dialogueThreeInput">РЕПЛИКА СПРАВА</label>
+            <textarea id="dialogueThreeInput" rows="3" maxlength="280" placeholder="Слова персонажа справа"></textarea>
+          </div>
+          <div class="quick-name-row"><div class="quick-names" id="quickNames" aria-label="Быстрые имена"></div><button class="icon-button" id="saveName" type="button" title="Сохранить имя в теги" aria-label="Сохранить имя в теги">＋</button></div>
+          <div class="field-foot"><span>Переносите строку для нужного ритма</span><span id="characterCount">0 / 280</span></div>
+          <div class="range-block"><div class="range-heading"><label class="field-label" for="positionInput">ПОЛОЖЕНИЕ</label><span id="positionValue">84%</span></div><input id="positionInput" class="range-input" type="range" min="0" max="100" value="84"><div class="range-caption"><span>Выше</span><span>Ниже</span></div></div>
+          <div class="range-block"><div class="range-heading"><label class="field-label" for="widthInput">ШИРИНА ДИАЛОГА И ЗАТЕМНЕНИЯ</label><span id="widthValue">76%</span></div><input id="widthInput" class="range-input" type="range" min="30" max="100" value="76"><div class="range-caption"><span>Уже</span><span>Шире</span></div></div>
+          <button id="resetDialogueStyle" class="reset-button dialogue-reset" type="button" disabled>Сбросить отступы и ширину диалога</button>
+        </div>
+      </section>
+
+      <section class="editor-group">
+        <div class="group-heading">
+          <label class="group-enable" title="Показывать название локации"><input id="locationEnabled" type="checkbox" aria-label="Показывать локацию"><span class="checkmark"></span></label>
+          <button class="group-toggle" id="locationToggle" type="button" aria-expanded="true" aria-controls="locationFields"><span>Локация</span><span class="chevron" aria-hidden="true"></span></button>
+        </div>
+        <div class="group-fields" id="locationFields">
+          <label class="field-label" for="locationInput">НАЗВАНИЕ</label>
+          <input id="locationInput" type="text" maxlength="48" placeholder="Например, Библиотека">
+          <label class="field-label location-caption-label" for="subtitleInput">ПОДПИСЬ НИЖЕ</label>
+          <input id="subtitleInput" type="text" maxlength="36" placeholder="Например, Вечер">
+          <label class="field-label location-caption-label" for="locationCornerInput">ПРИВЯЗАТЬ К УГЛУ</label>
+          <select id="locationCornerInput" class="mode-select"><option value="bottom-right">Справа снизу</option><option value="bottom-left">Слева снизу</option><option value="top-right">Справа сверху</option><option value="top-left">Слева сверху</option></select>
+          <div class="range-block"><div class="range-heading"><label class="field-label" for="locationOffsetInput">ОТСТУП ОТ КРАЯ</label><span id="locationOffsetValue">3%</span></div><input id="locationOffsetInput" class="range-input" type="range" min="0" max="25" value="3"><div class="range-caption"><span>Ближе</span><span>Дальше</span></div></div>
+        </div>
+      </section>
+
+      <section class="editor-group common-settings">
+        <div class="group-heading"><span class="common-title">Общие настройки</span><span class="common-caption">для диалога и локации</span></div>
+        <div class="group-fields">
+          <div class="range-block"><div class="range-heading"><label class="field-label" for="scaleInput">МАСШТАБ ОФОРМЛЕНИЯ</label><span id="scaleValue">100%</span></div><input id="scaleInput" class="range-input" type="range" min="30" max="220" value="100"><div class="range-caption"><span>Компактнее</span><span>Крупнее</span></div></div>
+          <div class="range-block"><div class="range-heading"><label class="field-label" for="flourishInput">РАЗМЕР ОРНАМЕНТОВ</label><span id="flourishValue">100%</span></div><input id="flourishInput" class="range-input" type="range" min="6" max="48" value="18"><div class="range-caption"><span>Компактнее</span><span>Крупнее</span></div></div>
+        </div>
+      </section>
+
+      <footer class="editor-footer"><span class="footer-star">✳</span><span>Каждый кадр и его настройки обрабатываются локально.</span></footer>
+    </aside>
+
+    <section class="preview-column" aria-label="Предпросмотр и галерея">
+      <div class="preview-toolbar">
+        <span class="preview-label"><span class="preview-dot"></span> ПРЕДПРОСМОТР</span>
+        <span class="drag-hint">Нажмите на текст для правки · диалог можно двигать вверх/вниз</span>
+        <button id="resetPosition" class="reset-button" type="button" disabled>Сбросить позицию</button>
+      </div>
+      <div class="stage-shell">
+        <div class="stage" id="stage" aria-label="Предпросмотр кадра">
+          <div class="empty-state" id="emptyState"><span class="empty-sparkle">✳</span><span class="empty-title">Здесь начнётся ваша история</span><span class="empty-caption">Выберите кадры слева или перетащите их сюда</span></div>
+          <img id="sceneImage" alt="Выбранная сцена" hidden>
+          <div class="location-tag" id="locationTag" hidden><div class="location-title preview-editable" id="locationPreview" data-edit-input="locationInput" contenteditable="plaintext-only" spellcheck="false" title="Нажмите, чтобы редактировать"></div><div class="location-rule"><svg class="location-flourish" id="locationFlourish" viewBox="0 0 38 14" preserveAspectRatio="none" aria-hidden="true"><path class="flourish-stem" id="locationFlourishPath" d="M0 9C2 9 3 3 8 2 12 1 15 4 13 7 11 10 7 9 8 6 9 3.8 13 4.5 16 6 18 7 20 7 23 7L38 7"/></svg></div><div class="location-subtitle preview-editable" id="subtitlePreview" data-edit-input="subtitleInput" contenteditable="plaintext-only" spellcheck="false" title="Нажмите, чтобы редактировать"></div></div>
+          <div class="dialogue-overlay" id="dialogueOverlay" hidden tabindex="0" role="button" aria-label="Перетащить диалог; двойной щелчок сбрасывает оформление">
+            <div class="speaker-name preview-editable" id="speakerPreview" data-edit-input="speakerInput" contenteditable="plaintext-only" spellcheck="false" title="Нажмите и печатайте, чтобы редактировать"></div>
+            <div class="dual-speakers" id="dualSpeakers" hidden><span class="speaker-name preview-editable" id="speakerTwoPreview" data-edit-input="speakerTwoInput" contenteditable="plaintext-only" spellcheck="false" title="Нажмите и печатайте, чтобы редактировать"></span><span class="speaker-name preview-editable" id="speakerThreePreview" data-edit-input="speakerThreeInput" contenteditable="plaintext-only" spellcheck="false" title="Нажмите и печатайте, чтобы редактировать"></span></div>
+            <div class="ornament-rule"><span class="rule-line"></span><span class="rule-diamond rule-diamond-left"></span><span class="rule-center-diamond" aria-hidden="true"></span><span class="rule-diamond rule-diamond-right"></span></div>
+            <div class="dialogue-text preview-editable" id="dialoguePreview" data-edit-input="dialogueInput" contenteditable="plaintext-only" spellcheck="false" title="Нажмите и печатайте, чтобы редактировать"></div>
+            <div class="dual-dialogues" id="dualDialogues" hidden><div class="dialogue-text preview-editable" id="dialogueTwoPreview" data-edit-input="dialogueTwoInput" contenteditable="plaintext-only" spellcheck="false" title="Нажмите и печатайте, чтобы редактировать"></div><div class="dialogue-text preview-editable" id="dialogueThreePreview" data-edit-input="dialogueThreeInput" contenteditable="plaintext-only" spellcheck="false" title="Нажмите и печатайте, чтобы редактировать"></div></div>
+            <div class="dialogue-continue" aria-hidden="true"><span></span></div>
+          </div>
+          <div class="drop-overlay" id="dropOverlay">Отпустите, чтобы добавить кадры</div>
+        </div>
+      </div>
+      <div class="preview-caption"><span><span id="activeOrdinal">00</span> <span class="caption-divider">/</span> КАДР ТЕКУЩЕЙ ИСТОРИИ</span><span id="imageDimensions">ИСХОДНЫЙ КАДР НЕ ИЗМЕНЯЕТСЯ</span></div>
+      <section class="gallery" aria-label="Галерея кадров">
+        <div class="gallery-heading"><span>КАДРЫ <span id="galleryCount">0</span></span><span>Отметьте, какие войдут в ZIP</span></div>
+        <div class="gallery-strip" id="galleryStrip"><button class="gallery-add" id="addMore" type="button"><span>＋</span><small>Добавить кадры</small></button></div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>
