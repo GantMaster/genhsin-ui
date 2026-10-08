@@ -21,7 +21,7 @@ const ui = {
   dialogueToggle: $('dialogueToggle'), locationToggle: $('locationToggle'), dialogueFields: $('dialogueFields'), locationFields: $('locationFields'),
   saveName: $('saveName'), quickNames: $('quickNames'), characterCount: $('characterCount'),
   positionInput: $('positionInput'), positionValue: $('positionValue'), widthInput: $('widthInput'), widthValue: $('widthValue'),
-  flourishInput: $('flourishInput'), flourishValue: $('flourishValue'), scaleInput: $('scaleInput'), scaleValue: $('scaleValue'), applyScaleAll: $('applyScaleAll'),
+  flourishInput: $('flourishInput'), flourishValue: $('flourishValue'), scaleInput: $('scaleInput'), scaleValue: $('scaleValue'),
   resetPosition: $('resetPosition'), resetDialogueStyle: $('resetDialogueStyle'), galleryStrip: $('galleryStrip'), galleryCount: $('galleryCount'), imageSummary: $('imageSummary'),
   activeOrdinal: $('activeOrdinal'), imageDimensions: $('imageDimensions'),
 };
@@ -129,20 +129,19 @@ function saveActive() {
   } else savedState.draft = value;
   persist();
 }
-function applyScaleToBatch() {
+function syncScaleAcrossBatch(saveQueue = false) {
   const current = activeItem();
-  if (!current || items.length < 2) return;
+  if (!current) { refreshPreview(); return; }
   saveActive();
   const scale = clamp(ui.scaleInput.value, 30, 220);
+  savedState.draft = { ...savedState.draft, scale };
   for (const item of items) {
     item.settings = { ...item.settings, scale };
     savedState.templates[item.id] = item.settings;
   }
   persist();
-  persistImageQueue();
+  if (saveQueue) persistImageQueue();
   refreshPreview(false);
-  ui.applyScaleAll.textContent = 'Масштаб обновлён для ' + items.length + ' кадров';
-  window.setTimeout(updateCounts, 1400);
 }
 function fitStage() {
   const shell = ui.stageShell.getBoundingClientRect();
@@ -344,8 +343,6 @@ function updateCounts() {
   ui.copyOne.disabled = busy || !activeItem();
   ui.resetPosition.disabled = !activeItem();
   ui.resetDialogueStyle.disabled = !activeItem();
-  ui.applyScaleAll.disabled = busy || items.length < 2;
-  ui.applyScaleAll.textContent = 'Применить масштаб ко всем кадрам (' + count + ')';
   ui.imageSummary.textContent = count ? count + (count === 1 ? ' кадр в галерее' : ' кадров в галерее') : 'Сначала добавьте хотя бы один кадр';
   const current = activeItem(), index = current ? items.indexOf(current) + 1 : 0;
   ui.activeOrdinal.textContent = String(index).padStart(2, '0');
@@ -671,10 +668,11 @@ ui.exportOne.addEventListener('click', exportCurrent); ui.copyOne.addEventListen
 for (const input of [ui.speakerInput, ui.speakerTwoInput, ui.speakerThreeInput]) input.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); ui.nameTarget = input; saveName(); } });
 ui.nameTarget = ui.speakerInput;
 for (const input of [ui.speakerInput, ui.speakerTwoInput, ui.speakerThreeInput]) input.addEventListener('focus', () => { ui.nameTarget = input; });
-for (const input of [ui.speakerInput, ui.dialogueInput, ui.locationInput, ui.subtitleInput, ui.speakerTwoInput, ui.speakerThreeInput, ui.dialogueTwoInput, ui.dialogueThreeInput, ui.dialogueMode, ui.locationCornerInput, ui.locationOffsetInput, ui.dialogueEnabled, ui.locationEnabled, ui.positionInput, ui.widthInput, ui.flourishInput, ui.scaleInput]) input.addEventListener('input', () => refreshPreview());
+for (const input of [ui.speakerInput, ui.dialogueInput, ui.locationInput, ui.subtitleInput, ui.speakerTwoInput, ui.speakerThreeInput, ui.dialogueTwoInput, ui.dialogueThreeInput, ui.dialogueMode, ui.locationCornerInput, ui.locationOffsetInput, ui.dialogueEnabled, ui.locationEnabled, ui.positionInput, ui.widthInput, ui.flourishInput]) input.addEventListener('input', () => refreshPreview());
+ui.scaleInput.addEventListener('input', () => syncScaleAcrossBatch());
+ui.scaleInput.addEventListener('change', () => syncScaleAcrossBatch(true));
 ui.resetPosition.addEventListener('click', () => { ui.positionInput.value = 84; refreshPreview(); });
 ui.resetDialogueStyle.addEventListener('click', resetDialogueStyle);
-ui.applyScaleAll.addEventListener('click', applyScaleToBatch);
 ui.dialogueToggle.addEventListener('click', () => { savedState.collapsed.dialogue = !savedState.collapsed.dialogue; persist(); applyCollapsedState(); });
 ui.locationToggle.addEventListener('click', () => { savedState.collapsed.location = !savedState.collapsed.location; persist(); applyCollapsedState(); });
 ui.dialogueOverlay.addEventListener('pointerdown', startDrag); ui.dialogueOverlay.addEventListener('pointermove', moveDrag);

@@ -96,9 +96,6 @@ input::placeholder, textarea::placeholder { color: #77746b; }
 .range-input::-webkit-slider-thumb { width: 11px; height: 11px; margin-top: -4.5px; appearance: none; border: 2px solid #171714; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
 .range-input::-moz-range-thumb { width: 8px; height: 8px; border: 2px solid #171714; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 1px var(--gold); }
 .range-caption { display: flex; justify-content: space-between; margin-top: 1px; color: #77746b; font-size: 8px; }
-.apply-scale-button { width: 100%; min-height: 27px; margin-top: 7px; padding: 4px 7px; border: 1px solid #464133; border-radius: 3px; background: #25241e; color: #d5c28c; font-size: 9px; cursor: pointer; }
-.apply-scale-button:hover:not(:disabled) { border-color: #b89c58; background: #2d2a20; }
-.apply-scale-button:disabled { opacity: .45; cursor: default; }
 .location-caption-label { margin-top: 12px; }
 .editor-footer { display: flex; align-items: center; gap: 7px; margin-top: auto; padding-top: 12px; color: #898477; font-size: 9px; line-height: 1.4; }
 .footer-star { color: var(--gold); }
