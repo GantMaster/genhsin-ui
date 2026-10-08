@@ -55,6 +55,45 @@ function persist() {
 }
 function activeItem() { return items.find((item) => item.id === activeId) || null; }
 function imageKey(file) { return [file.name, file.size, file.lastModified].join('|'); }
+let imageDbPromise;
+function openImageDatabase() {
+  if (!imageDbPromise) imageDbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open('iskra-image-gallery-v1', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('images', { keyPath: 'id' });
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+  return imageDbPromise;
+}
+async function persistImageQueue() {
+  try {
+    const db = await openImageDatabase();
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction('images', 'readwrite');
+      const store = transaction.objectStore('images');
+      store.clear();
+      items.forEach((item, order) => store.put({ id: item.id, file: item.file, include: item.include, order }));
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+  } catch { /* Keep the current session usable if browser storage is unavailable. */ }
+}
+async function restoreImageQueue() {
+  try {
+    const db = await openImageDatabase();
+    const records = await new Promise((resolve, reject) => {
+      const request = db.transaction('images').objectStore('images').getAll();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    items = records.sort((a, b) => a.order - b.order).map((record) => ({
+      id: record.id, file: record.file, url: URL.createObjectURL(record.file), include: record.include !== false,
+      settings: { ...defaultSettings, ...(savedState.templates[record.id] || savedState.draft) },
+    }));
+    if (items.length) setActive(items.some((item) => item.id === savedState.activeImageId) ? savedState.activeImageId : items[0].id);
+  } catch { /* The editor starts empty if this browser cannot restore its saved gallery. */ }
+}
 function fileTitle(name) { return name.replace(/\.[^.]+$/, '') || 'Кадр'; }
 
 function readControls() {
@@ -256,7 +295,7 @@ function renderGallery() {
     const footer = document.createElement('div'); footer.className = 'gallery-item-footer';
     const includeLabel = document.createElement('label'); includeLabel.className = 'include-label';
     const include = document.createElement('input'); include.type = 'checkbox'; include.checked = item.include; include.setAttribute('aria-label', 'Добавить ' + item.file.name + ' в ZIP');
-    include.addEventListener('change', () => { item.include = include.checked; updateCounts(); });
+    include.addEventListener('change', () => { item.include = include.checked; persistImageQueue(); updateCounts(); });
     const includeText = document.createElement('span'); includeText.textContent = 'В ZIP';
     includeLabel.append(include, includeText);
     const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'remove-image'; remove.textContent = '×'; remove.title = 'Убрать кадр';
@@ -278,6 +317,7 @@ function reorderGallery(sourceId, targetId, after) {
   const [moved] = items.splice(from, 1);
   const insertAt = target + (after ? 1 : 0) - (from < target ? 1 : 0);
   items.splice(insertAt, 0, moved);
+  persistImageQueue();
   renderGallery();
 }
 function updateCounts() {
@@ -305,6 +345,8 @@ function updateCounts() {
 function setActive(id) {
   if (activeId) saveActive();
   activeId = id;
+  savedState.activeImageId = id;
+  persist();
   const item = activeItem();
   if (!item) {
     ui.sceneImage.removeAttribute('src'); ui.sceneImage.hidden = true; ui.emptyState.hidden = false;
@@ -326,13 +368,14 @@ function addFiles(fileList) {
     const item = { id, file, url: URL.createObjectURL(file), include: true, settings };
     items.push(item); if (!firstNew) firstNew = item.id;
   }
-  if (firstNew) setActive(firstNew);
+  if (firstNew) { setActive(firstNew); persistImageQueue(); }
 }
 function removeItem(id) {
   const index = items.findIndex((item) => item.id === id); if (index < 0) return;
   const wasActive = activeId === id;
   if (wasActive) saveActive();
   URL.revokeObjectURL(items[index].url); items.splice(index, 1);
+  persistImageQueue();
   if (wasActive) {
     activeId = null;
     const next = items[Math.min(index, items.length - 1)];
@@ -638,4 +681,4 @@ for (const event of ['dragenter', 'dragover']) ui.stage.addEventListener(event, 
 for (const event of ['dragleave', 'drop']) ui.stage.addEventListener(event, (event) => { event.preventDefault(); ui.stage.classList.remove('is-dragging'); });
 ui.stage.addEventListener('drop', (event) => addFiles(event.dataTransfer.files));
 window.addEventListener('resize', () => { fitStage(); refreshPreview(); }); window.addEventListener('beforeunload', () => items.forEach((item) => URL.revokeObjectURL(item.url)));
-applyCollapsedState(); renderNames(); applyControls(savedState.draft); renderGallery(); fitStage();
+applyCollapsedState(); renderNames(); applyControls(savedState.draft); renderGallery(); fitStage(); restoreImageQueue();

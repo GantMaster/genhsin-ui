@@ -118,7 +118,7 @@ input::placeholder, textarea::placeholder { color: #77746b; }
 .empty-caption { max-width: 250px; color: #898477; font-size: 10px; line-height: 1.6; }
 @keyframes slow-turn { to { transform: rotate(360deg); } }
 
-.location-tag { position: absolute; z-index: 4; width: max-content; max-width: 46%; display: flex; flex-direction: column; align-items: stretch; color: #f0e7d5; cursor: grab; touch-action: none; user-select: none; }
+.location-tag { position: absolute; z-index: 4; width: max-content; max-width: 46%; display: flex; flex-direction: column; align-items: flex-start; color: #f0e7d5; cursor: grab; touch-action: none; user-select: none; }
 .location-tag:active { cursor: grabbing; }
 .location-tag.is-dragging::before { display: none; }
 .location-tag::before { position: absolute; z-index: -1; inset: auto; width: calc(100% + 8cqw + var(--shade-extend-x, 96px)); height: calc(100% + 8cqh + var(--shade-extend-y, 96px)); background: rgb(0 0 0 / .75); filter: blur(48px); mix-blend-mode: multiply; content: ''; pointer-events: none; }
@@ -131,7 +131,7 @@ input::placeholder, textarea::placeholder { color: #77746b; }
 .location-tag[data-corner="top-left"] { left: var(--location-edge, 5%); right: auto; top: var(--location-edge, 5%); bottom: auto; }
 .location-tag[data-corner="top-right"] { right: var(--location-edge, 5%); left: auto; top: var(--location-edge, 5%); bottom: auto; }
 .location-title { width: max-content; max-width: 100%; overflow: hidden; color: #ffee8e; font-family: var(--location-serif); font-size: calc(3.6cqw * var(--ui-scale)); font-weight: 600; line-height: 1.03; text-overflow: ellipsis; white-space: nowrap; }
-.location-tag[data-corner$="right"] .location-title, .location-tag[data-corner$="right"] .location-subtitle { text-align: left; align-self: flex-start; }
+.location-title, .location-subtitle { text-align: left; align-self: flex-start; }
 .location-rule { display: flex; width: 100%; align-items: center; gap: 0; margin: calc(3px * var(--ui-scale)) 0 calc(5px * var(--ui-scale)); }
 .location-flourish { position: relative; z-index: 1; width: calc(2.9cqw * var(--ornament-scale) * var(--ui-scale)); height: calc(1.1cqw * var(--ornament-scale) * var(--ui-scale)); flex: 0 0 auto; overflow: visible; fill: none; stroke: #d2ad58; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
 .location-subtitle { width: max-content; max-width: 100%; min-height: 1em; color: #fff; font-family: var(--location-serif); font-size: calc(2.4cqw * var(--ui-scale)); font-weight: 500; line-height: 1.08; overflow-wrap: anywhere; }
