@@ -224,6 +224,29 @@ function renderGallery() {
   for (const item of items) {
     const card = document.createElement('article');
     card.className = 'gallery-item' + (item.id === activeId ? ' is-active' : '');
+    card.draggable = true;
+    card.addEventListener('dragstart', (event) => {
+      if (event.target.closest('.gallery-item-footer')) { event.preventDefault(); return; }
+      galleryDragId = item.id;
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', item.id);
+      requestAnimationFrame(() => card.classList.add('is-dragging'));
+    });
+    card.addEventListener('dragover', (event) => {
+      if (!galleryDragId || galleryDragId === item.id) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      ui.galleryStrip.querySelectorAll('.gallery-item').forEach((node) => node.classList.remove('drop-before', 'drop-after'));
+      card.classList.add(event.clientX < card.getBoundingClientRect().left + card.offsetWidth / 2 ? 'drop-before' : 'drop-after');
+    });
+    card.addEventListener('drop', (event) => {
+      event.preventDefault();
+      const sourceId = galleryDragId || event.dataTransfer.getData('text/plain');
+      const after = event.clientX >= card.getBoundingClientRect().left + card.offsetWidth / 2;
+      reorderGallery(sourceId, item.id, after);
+      clearGalleryDrag();
+    });
+    card.addEventListener('dragend', clearGalleryDrag);
     const select = document.createElement('button');
     select.type = 'button'; select.className = 'gallery-select'; select.setAttribute('aria-label', 'Открыть кадр ' + item.file.name);
     const thumb = document.createElement('img'); thumb.src = item.url; thumb.alt = '';
@@ -243,6 +266,19 @@ function renderGallery() {
   }
   ui.galleryStrip.append(ui.addMore);
   updateCounts();
+}
+function clearGalleryDrag() {
+  galleryDragId = null;
+  ui.galleryStrip.querySelectorAll('.gallery-item').forEach((card) => card.classList.remove('is-dragging', 'drop-before', 'drop-after'));
+}
+function reorderGallery(sourceId, targetId, after) {
+  const from = items.findIndex((item) => item.id === sourceId);
+  const target = items.findIndex((item) => item.id === targetId);
+  if (from < 0 || target < 0 || from === target) return;
+  const [moved] = items.splice(from, 1);
+  const insertAt = target + (after ? 1 : 0) - (from < target ? 1 : 0);
+  items.splice(insertAt, 0, moved);
+  renderGallery();
 }
 function updateCounts() {
   const count = items.length, included = items.filter((item) => item.include).length;
