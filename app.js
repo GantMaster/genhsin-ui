@@ -429,12 +429,12 @@ function drawShade(context, center, top, width, height) {
   const layer = document.createElement('canvas');
   layer.width = Math.max(1, Math.ceil(width)); layer.height = Math.max(1, Math.ceil(height));
   const shade = layer.getContext('2d'), vertical = shade.createLinearGradient(0, 0, 0, layer.height);
-  vertical.addColorStop(0, 'rgba(0,0,0,0)'); vertical.addColorStop(.1, 'rgba(0,0,0,.12)'); vertical.addColorStop(.36, 'rgba(0,0,0,.4)'); vertical.addColorStop(.68, 'rgba(0,0,0,.32)'); vertical.addColorStop(.9, 'rgba(0,0,0,.12)'); vertical.addColorStop(1, 'rgba(0,0,0,0)');
+  vertical.addColorStop(0, 'rgba(0,0,0,0)'); vertical.addColorStop(.1, 'rgba(0,0,0,.18)'); vertical.addColorStop(.36, 'rgba(0,0,0,.56)'); vertical.addColorStop(.68, 'rgba(0,0,0,.46)'); vertical.addColorStop(.9, 'rgba(0,0,0,.18)'); vertical.addColorStop(1, 'rgba(0,0,0,0)');
   shade.fillStyle = vertical; shade.fillRect(0, 0, layer.width, layer.height); shade.globalCompositeOperation = 'destination-in';
   const horizontal = shade.createLinearGradient(0, 0, layer.width, 0);
   horizontal.addColorStop(0, 'rgba(0,0,0,0)'); horizontal.addColorStop(.13, '#000'); horizontal.addColorStop(.87, '#000'); horizontal.addColorStop(1, 'rgba(0,0,0,0)');
   shade.fillStyle = horizontal; shade.fillRect(0, 0, layer.width, layer.height);
-  context.save(); context.globalCompositeOperation = 'multiply'; context.filter = 'blur(' + Math.max(1, width * .012) + 'px)';
+  context.save(); context.globalCompositeOperation = 'multiply'; context.filter = 'blur(' + Math.max(1, width * .018) + 'px)';
   context.drawImage(layer, center - layer.width / 2, top); context.restore();
 }
 function drawLocationShade(context, left, top, width, titleFont, outputScale, leftCorner, topCorner) {
