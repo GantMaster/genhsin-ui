@@ -21,7 +21,7 @@ const ui = {
   dialogueToggle: $('dialogueToggle'), locationToggle: $('locationToggle'), dialogueFields: $('dialogueFields'), locationFields: $('locationFields'),
   saveName: $('saveName'), quickNames: $('quickNames'), characterCount: $('characterCount'),
   positionInput: $('positionInput'), positionValue: $('positionValue'), widthInput: $('widthInput'), widthValue: $('widthValue'),
-  flourishInput: $('flourishInput'), flourishValue: $('flourishValue'), scaleInput: $('scaleInput'), scaleValue: $('scaleValue'),
+  flourishInput: $('flourishInput'), flourishValue: $('flourishValue'), scaleInput: $('scaleInput'), scaleValue: $('scaleValue'), applyScaleAll: $('applyScaleAll'),
   resetPosition: $('resetPosition'), resetDialogueStyle: $('resetDialogueStyle'), galleryStrip: $('galleryStrip'), galleryCount: $('galleryCount'), imageSummary: $('imageSummary'),
   activeOrdinal: $('activeOrdinal'), imageDimensions: $('imageDimensions'),
 };
@@ -72,7 +72,7 @@ async function persistImageQueue() {
       const transaction = db.transaction('images', 'readwrite');
       const store = transaction.objectStore('images');
       store.clear();
-      items.forEach((item, order) => store.put({ id: item.id, file: item.file, include: item.include, order }));
+      items.forEach((item, order) => store.put({ id: item.id, file: item.file, include: item.include, order, settings: item.settings }));
       transaction.oncomplete = resolve;
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
@@ -89,7 +89,7 @@ async function restoreImageQueue() {
     });
     items = records.sort((a, b) => a.order - b.order).map((record) => ({
       id: record.id, file: record.file, url: URL.createObjectURL(record.file), include: record.include !== false,
-      settings: { ...defaultSettings, ...(savedState.templates[record.id] || savedState.draft) },
+      settings: { ...defaultSettings, ...(record.settings || {}), ...(savedState.templates[record.id] || savedState.draft) },
     }));
     if (items.length) setActive(items.some((item) => item.id === savedState.activeImageId) ? savedState.activeImageId : items[0].id);
   } catch { /* The editor starts empty if this browser cannot restore its saved gallery. */ }
@@ -128,6 +128,21 @@ function saveActive() {
     if (templateKeys.length > 60) delete savedState.templates[templateKeys[0]];
   } else savedState.draft = value;
   persist();
+}
+function applyScaleToBatch() {
+  const current = activeItem();
+  if (!current || items.length < 2) return;
+  saveActive();
+  const scale = clamp(ui.scaleInput.value, 30, 220);
+  for (const item of items) {
+    item.settings = { ...item.settings, scale };
+    savedState.templates[item.id] = item.settings;
+  }
+  persist();
+  persistImageQueue();
+  refreshPreview(false);
+  ui.applyScaleAll.textContent = 'Масштаб обновлён для ' + items.length + ' кадров';
+  window.setTimeout(updateCounts, 1400);
 }
 function fitStage() {
   const shell = ui.stageShell.getBoundingClientRect();
@@ -329,6 +344,8 @@ function updateCounts() {
   ui.copyOne.disabled = busy || !activeItem();
   ui.resetPosition.disabled = !activeItem();
   ui.resetDialogueStyle.disabled = !activeItem();
+  ui.applyScaleAll.disabled = busy || items.length < 2;
+  ui.applyScaleAll.textContent = 'Применить масштаб ко всем кадрам (' + count + ')';
   ui.imageSummary.textContent = count ? count + (count === 1 ? ' кадр в галерее' : ' кадров в галерее') : 'Сначала добавьте хотя бы один кадр';
   const current = activeItem(), index = current ? items.indexOf(current) + 1 : 0;
   ui.activeOrdinal.textContent = String(index).padStart(2, '0');
@@ -425,17 +442,19 @@ function drawLocationSwash(context, x, y, flourishWidth, totalWidth, scale) {
     const [e1x,e1y] = point(18,7), [e2x,e2y] = point(20,7), [e3x,e3y] = point(23,7); context.bezierCurveTo(e1x,e1y,e2x,e2y,e3x,e3y);
   const [endX,endY] = point(38,7); context.lineTo(endX,endY); context.lineTo(x + totalWidth, y); context.stroke(); context.restore();
 }
-function drawShade(context, center, top, width, height) {
+function drawShade(context, center, top, width, height, blur) {
+  blur = Math.max(1, blur);
+  const padding = Math.ceil(blur * 3);
   const layer = document.createElement('canvas');
-  layer.width = Math.max(1, Math.ceil(width)); layer.height = Math.max(1, Math.ceil(height));
-  const shade = layer.getContext('2d'), vertical = shade.createLinearGradient(0, 0, 0, layer.height);
-  vertical.addColorStop(0, 'rgba(0,0,0,0)'); vertical.addColorStop(.1, 'rgba(0,0,0,.18)'); vertical.addColorStop(.36, 'rgba(0,0,0,.48)'); vertical.addColorStop(.68, 'rgba(0,0,0,.64)'); vertical.addColorStop(.9, 'rgba(0,0,0,.3)'); vertical.addColorStop(1, 'rgba(0,0,0,0)');
-  shade.fillStyle = vertical; shade.fillRect(0, 0, layer.width, layer.height); shade.globalCompositeOperation = 'destination-in';
-  const horizontal = shade.createLinearGradient(0, 0, layer.width, 0);
+  layer.width = Math.max(1, Math.ceil(width + padding * 2)); layer.height = Math.max(1, Math.ceil(height + padding * 2));
+  const shade = layer.getContext('2d'), vertical = shade.createLinearGradient(0, padding, 0, padding + height);
+  vertical.addColorStop(0, 'rgba(0,0,0,0)'); vertical.addColorStop(.1, 'rgba(0,0,0,.12)'); vertical.addColorStop(.36, 'rgba(0,0,0,.42)'); vertical.addColorStop(.68, 'rgba(0,0,0,.62)'); vertical.addColorStop(.8, 'rgba(0,0,0,.72)'); vertical.addColorStop(.94, 'rgba(0,0,0,.35)'); vertical.addColorStop(1, 'rgba(0,0,0,0)');
+  shade.fillStyle = vertical; shade.fillRect(padding, padding, width, height); shade.globalCompositeOperation = 'destination-in';
+  const horizontal = shade.createLinearGradient(padding, 0, padding + width, 0);
   horizontal.addColorStop(0, 'rgba(0,0,0,0)'); horizontal.addColorStop(.13, '#000'); horizontal.addColorStop(.87, '#000'); horizontal.addColorStop(1, 'rgba(0,0,0,0)');
-  shade.fillStyle = horizontal; shade.fillRect(0, 0, layer.width, layer.height);
-  context.save(); context.globalCompositeOperation = 'multiply'; context.filter = 'blur(' + Math.max(1, width * .018) + 'px)';
-  context.drawImage(layer, center - layer.width / 2, top); context.restore();
+  shade.fillStyle = horizontal; shade.fillRect(padding, padding, width, height);
+  context.save(); context.globalCompositeOperation = 'multiply'; context.filter = 'blur(' + blur + 'px)';
+  context.drawImage(layer, center - width / 2 - padding, top - padding); context.restore();
 }
 function drawLocationShade(context, left, top, width, titleFont, outputScale, leftCorner, topCorner) {
   const blur = 48 * outputScale, padding = Math.ceil(blur * 3);
@@ -460,7 +479,7 @@ async function renderPng(item) {
     const bodyFont = Math.max(13, fontBasis * .021) * scale;
     context.font = '600 ' + bodyFont + 'px Georgia, serif';
     const lines = wrapLines(context, s.dialogue, width * .95), lineHeight = fontBasis * .029 * scale;
-    drawShade(context, center, centerY - font * 2.15, width * 1.5, font * 4.35 + Math.max(0, lines.length - 1) * lineHeight);
+    drawShade(context, center, centerY - font * 2.15, width * 1.5, font * 4.35 + Math.max(0, lines.length - 1) * lineHeight, fontBasis * .011 * scale);
     context.shadowColor = 'rgba(0,0,0,.42)'; context.shadowBlur = 0; context.shadowOffsetY = 1 * scale;
     context.fillStyle = '#ffd15f'; context.font = '700 ' + font + 'px Georgia, serif';
     context.fillText(s.speaker, center, centerY - font * 1.05); context.shadowOffsetY = 0;
@@ -478,7 +497,7 @@ async function renderPng(item) {
     context.font = '600 ' + bodyFont + 'px Georgia, serif';
     const leftLines = wrapLines(context, s.dialogueTwo, columnWidth), rightLines = wrapLines(context, s.dialogueThree, columnWidth);
     const count = Math.max(leftLines.length, rightLines.length, 1);
-    drawShade(context, center, centerY - font * 2.15, width * 1.5, font * 4.35 + Math.max(0, count - 1) * lineHeight);
+    drawShade(context, center, centerY - font * 2.15, width * 1.5, font * 4.35 + Math.max(0, count - 1) * lineHeight, fontBasis * .011 * scale);
     context.fillStyle = '#ffd15f'; context.font = '700 ' + font + 'px Georgia, serif'; context.shadowColor = 'rgba(0,0,0,.42)'; context.shadowBlur = 0; context.shadowOffsetY = 1 * scale;
     const leftNames = wrapLines(context, s.speakerTwo, columnWidth), rightNames = wrapLines(context, s.speakerThree, columnWidth);
     const nameRows = Math.max(leftNames.length, rightNames.length, 1);
@@ -655,6 +674,7 @@ for (const input of [ui.speakerInput, ui.speakerTwoInput, ui.speakerThreeInput])
 for (const input of [ui.speakerInput, ui.dialogueInput, ui.locationInput, ui.subtitleInput, ui.speakerTwoInput, ui.speakerThreeInput, ui.dialogueTwoInput, ui.dialogueThreeInput, ui.dialogueMode, ui.locationCornerInput, ui.locationOffsetInput, ui.dialogueEnabled, ui.locationEnabled, ui.positionInput, ui.widthInput, ui.flourishInput, ui.scaleInput]) input.addEventListener('input', () => refreshPreview());
 ui.resetPosition.addEventListener('click', () => { ui.positionInput.value = 84; refreshPreview(); });
 ui.resetDialogueStyle.addEventListener('click', resetDialogueStyle);
+ui.applyScaleAll.addEventListener('click', applyScaleToBatch);
 ui.dialogueToggle.addEventListener('click', () => { savedState.collapsed.dialogue = !savedState.collapsed.dialogue; persist(); applyCollapsedState(); });
 ui.locationToggle.addEventListener('click', () => { savedState.collapsed.location = !savedState.collapsed.location; persist(); applyCollapsedState(); });
 ui.dialogueOverlay.addEventListener('pointerdown', startDrag); ui.dialogueOverlay.addEventListener('pointermove', moveDrag);
