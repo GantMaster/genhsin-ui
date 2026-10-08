@@ -452,14 +452,14 @@ async function renderPng(item) {
   const image = await createImageBitmap(item.file), canvas = document.createElement('canvas');
   canvas.width = image.width; canvas.height = image.height;
   const context = canvas.getContext('2d'); context.drawImage(image, 0, 0); image.close();
-  const s = item.settings, scale = s.scale / 100, center = canvas.width * s.x / 100, centerY = canvas.height * s.position / 100;
-  const width = canvas.width * s.width / 100, font = Math.max(14, canvas.width * .025) * scale;
+  const s = item.settings, scale = s.scale / 100, fontBasis = Math.min(canvas.width, canvas.height), center = canvas.width * s.x / 100, centerY = canvas.height * s.position / 100;
+  const width = canvas.width * s.width / 100, font = Math.max(14, fontBasis * .025) * scale;
   await document.fonts.ready;
   if (s.showDialogue && s.dialogueMode !== 'dual') {
     context.textAlign = 'center'; context.textBaseline = 'middle';
-    const bodyFont = Math.max(13, canvas.width * .021) * scale;
+    const bodyFont = Math.max(13, fontBasis * .021) * scale;
     context.font = '600 ' + bodyFont + 'px Georgia, serif';
-    const lines = wrapLines(context, s.dialogue, width * .95), lineHeight = canvas.width * .029 * scale;
+    const lines = wrapLines(context, s.dialogue, width * .95), lineHeight = fontBasis * .029 * scale;
     drawShade(context, center, centerY - font * 2.15, width * 1.5, font * 4.35 + Math.max(0, lines.length - 1) * lineHeight);
     context.shadowColor = 'rgba(0,0,0,.42)'; context.shadowBlur = 0; context.shadowOffsetY = 1 * scale;
     context.fillStyle = '#ffd15f'; context.font = '700 ' + font + 'px Georgia, serif';
@@ -473,7 +473,7 @@ async function renderPng(item) {
     context.translate(center, centerY + font * 2.2 + Math.max(0, lines.length - 1) * lineHeight); context.rotate(Math.PI / 4); context.strokeRect(-6 * scale, -6 * scale, 12 * scale, 12 * scale); context.restore();
   }
   if (s.showDialogue && s.dialogueMode === 'dual') {
-    const bodyFont = Math.max(13, canvas.width * .021) * scale, lineHeight = canvas.width * .029 * scale;
+    const bodyFont = Math.max(13, fontBasis * .021) * scale, lineHeight = fontBasis * .029 * scale;
     const columnWidth = width * .46;
     context.font = '600 ' + bodyFont + 'px Georgia, serif';
     const leftLines = wrapLines(context, s.dialogueTwo, columnWidth), rightLines = wrapLines(context, s.dialogueThree, columnWidth);
@@ -495,13 +495,13 @@ async function renderPng(item) {
     context.translate(center, centerY + font * 2.2 + Math.max(0, count - 1) * lineHeight); context.rotate(Math.PI / 4); context.strokeRect(-6 * scale, -6 * scale, 12 * scale, 12 * scale); context.restore();
   }
   if (s.showLocation && s.location.trim()) {
-    const titleFont = Math.max(20, canvas.width * .035) * scale, subFont = Math.max(15, canvas.width * .024) * scale;
+    const titleFont = Math.max(20, fontBasis * .035) * scale, subFont = Math.max(15, fontBasis * .024) * scale;
     context.save(); context.textAlign = 'left'; context.textBaseline = 'middle';
     context.fillStyle = '#ffee8e'; context.font = '600 ' + titleFont + 'px "Cormorant Garamond", Georgia, serif';
     const titleWidth = context.measureText(s.location).width;
     context.font = '500 ' + subFont + 'px "Cormorant Garamond", Georgia, serif';
     const subtitleWidth = s.subtitle.trim() ? context.measureText(s.subtitle).width : 0;
-    const swashWidth = canvas.width * .029 * (s.flourish / 18) * scale;
+    const swashWidth = fontBasis * .029 * (s.flourish / 18) * scale;
     const boxWidth = Math.min(canvas.width * .46, Math.max(titleWidth, subtitleWidth, swashWidth * 3));
     const corner = s.locationCorner || 'bottom-right', edge = (s.locationOffset ?? 3) / 100;
     const offsetX = canvas.width * edge, offsetY = canvas.height * edge;
