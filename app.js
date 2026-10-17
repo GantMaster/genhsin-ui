@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'iskra-editor-v1';
 const defaultSettings = {
-  showDialogue: true, showLocation: false, dialogueMode: 'single', speaker: 'suxhxakos', speakerTwo: '', speakerThree: '',
+  showDialogue: true, showLocation: false, dialogueMode: 'single', dialogueStyle: 'genshin', speaker: 'suxhxakos', speakerTwo: '', speakerThree: '',
   dialogue: 'Погодите-ка, а это что такое?', dialogueTwo: '', dialogueThree: '', position: 84, width: 76,
   flourish: 18, scale: 100, x: 50, location: 'Библиотека', subtitle: 'Вечер', locationCorner: 'bottom-right', locationOffset: 3,
 };
@@ -16,7 +16,7 @@ const ui = {
   locationFlourish: $('locationFlourish'), locationFlourishPath: $('locationFlourishPath'),
   speakerInput: $('speakerInput'), dialogueInput: $('dialogueInput'), locationInput: $('locationInput'), subtitleInput: $('subtitleInput'),
   speakerTwoInput: $('speakerTwoInput'), speakerThreeInput: $('speakerThreeInput'), dialogueTwoInput: $('dialogueTwoInput'), dialogueThreeInput: $('dialogueThreeInput'),
-  dialogueMode: $('dialogueMode'), singleFields: $('singleFields'), dualFields: $('dualFields'), locationCornerInput: $('locationCornerInput'), locationOffsetInput: $('locationOffsetInput'), locationOffsetValue: $('locationOffsetValue'),
+  dialogueMode: $('dialogueMode'), dialogueStyle: $('dialogueStyle'), singleFields: $('singleFields'), dualFields: $('dualFields'), locationCornerInput: $('locationCornerInput'), locationOffsetInput: $('locationOffsetInput'), locationOffsetValue: $('locationOffsetValue'),
   dialogueEnabled: $('dialogueEnabled'), locationEnabled: $('locationEnabled'),
   dialogueToggle: $('dialogueToggle'), locationToggle: $('locationToggle'), dialogueFields: $('dialogueFields'), locationFields: $('locationFields'),
   saveName: $('saveName'), quickNames: $('quickNames'), characterCount: $('characterCount'),
@@ -101,6 +101,7 @@ function readControls() {
     showDialogue: ui.dialogueEnabled.checked,
     showLocation: ui.locationEnabled.checked,
     dialogueMode: ui.dialogueMode.value,
+    dialogueStyle: ui.dialogueStyle.value,
     speaker: ui.speakerInput.value.slice(0, 36),
     speakerTwo: ui.speakerTwoInput.value.slice(0, 36),
     speakerThree: ui.speakerThreeInput.value.slice(0, 36),
@@ -165,6 +166,7 @@ function applyControls(settings) {
   ui.dialogueTwoInput.value = settings.dialogueTwo ?? '';
   ui.dialogueThreeInput.value = settings.dialogueThree ?? '';
   ui.dialogueMode.value = settings.dialogueMode === 'dual' ? 'dual' : 'single';
+  ui.dialogueStyle.value = settings.dialogueStyle === 'corpse-party' ? 'corpse-party' : 'genshin';
   ui.locationCornerInput.value = settings.locationCorner ?? 'bottom-right';
   const savedLocationOffset = settings.locationOffset ?? 5;
   ui.locationOffsetInput.value = clamp(savedLocationOffset === 0 || savedLocationOffset === 2 || savedLocationOffset === 5 ? 3 : savedLocationOffset, 0, 25);
@@ -201,6 +203,7 @@ function refreshPreview(save = true) {
   ui.singleFields.hidden = dual;
   ui.dualFields.hidden = !dual;
   ui.dialogueOverlay.classList.toggle('is-dual', dual);
+  ui.dialogueOverlay.dataset.style = settings.dialogueStyle || 'genshin';
   ui.dialogueOverlay.style.top = settings.position + '%';
   ui.dialogueOverlay.style.left = settings.x + '%';
   ui.dialogueOverlay.style.width = settings.width + '%';
@@ -453,6 +456,51 @@ function drawShade(context, center, top, width, height, blur) {
   context.save(); context.globalCompositeOperation = 'multiply'; context.filter = 'blur(' + blur + 'px)';
   context.drawImage(layer, center - width / 2 - padding, top - padding); context.restore();
 }
+function drawTornDialogue(context, settings, width, fontBasis, scale, center, centerY) {
+  const bodyFont = Math.max(15, fontBasis * .0205) * scale, nameFont = Math.max(13, fontBasis * .0175) * scale;
+  const lineHeight = bodyFont * 1.5, paddingX = bodyFont * .88, paddingTop = bodyFont * .61, paddingBottom = bodyFont * 1.3;
+  const dual = settings.dialogueMode === 'dual', contentWidth = width - paddingX * 2;
+  const columnGap = bodyFont * 2.1, columnWidth = (contentWidth - columnGap) / 2;
+  context.save(); context.textAlign = 'left'; context.textBaseline = 'middle';
+  context.font = '400 ' + bodyFont + 'px "Pangolin", "Segoe Print", cursive';
+  const leftLines = dual ? wrapLines(context, settings.dialogueTwo, columnWidth) : wrapLines(context, settings.dialogue, contentWidth - bodyFont * 1.2);
+  const rightLines = dual ? wrapLines(context, settings.dialogueThree, columnWidth) : [];
+  context.font = '400 ' + nameFont + 'px "Pangolin", "Segoe Print", cursive';
+  const leftNames = wrapLines(context, dual ? settings.speakerTwo : settings.speaker, dual ? columnWidth : contentWidth);
+  const rightNames = dual ? wrapLines(context, settings.speakerThree, columnWidth) : [];
+  const nameRows = dual ? Math.max(leftNames.length, rightNames.length, 1) : Math.max(leftNames.length, 1);
+  const textRows = dual ? Math.max(leftLines.length, rightLines.length, 1) : Math.max(leftLines.length, 1);
+  const panelHeight = Math.max(fontBasis * .18 * scale, paddingTop + nameRows * nameFont * 1.28 + bodyFont * .3 + textRows * lineHeight + paddingBottom);
+  const panelLeft = center - width / 2, panelTop = centerY - panelHeight / 2;
+  const amplitude = Math.max(1.5, bodyFont * .11), segments = 48;
+  const rough = (n, phase) => Math.sin(n * 2.17 + phase) * amplitude * .48 + Math.sin(n * 5.31 + phase * 1.7) * amplitude * .34 + Math.sin(n * .73 + phase * .6) * amplitude * .18;
+  context.beginPath();
+  for (let i = 0; i <= segments; i++) {
+    const x = panelLeft + width * i / segments, y = panelTop + rough(i, .8);
+    if (!i) context.moveTo(x, y); else context.lineTo(x, y);
+  }
+  for (let i = 0; i <= 8; i++) context.lineTo(panelLeft + width + rough(i, 2.4), panelTop + panelHeight * i / 8);
+  for (let i = segments; i >= 0; i--) context.lineTo(panelLeft + width * i / segments, panelTop + panelHeight + rough(i, 4.1));
+  for (let i = 8; i >= 0; i--) context.lineTo(panelLeft + rough(i, 6.2), panelTop + panelHeight * i / 8);
+  context.closePath(); context.fillStyle = 'rgba(5,5,7,.82)'; context.fill();
+  context.strokeStyle = 'rgba(245,245,245,.78)'; context.lineWidth = Math.max(1.2, bodyFont * .07); context.lineJoin = 'round'; context.stroke();
+  context.fillStyle = '#fff'; context.shadowColor = 'rgba(0,0,0,.75)'; context.shadowBlur = 1.5 * scale; context.shadowOffsetY = 1 * scale;
+  context.font = '400 ' + nameFont + 'px "Pangolin", "Segoe Print", cursive';
+  const textLeft = panelLeft + paddingX, namesTop = panelTop + paddingTop + nameFont * .62;
+  if (dual) {
+    leftNames.forEach((line, i) => context.fillText(line, textLeft, namesTop + i * nameFont * 1.28));
+    context.textAlign = 'right'; rightNames.forEach((line, i) => context.fillText(line, panelLeft + width - paddingX, namesTop + i * nameFont * 1.28));
+  } else leftNames.forEach((line, i) => context.fillText(line, textLeft, namesTop + i * nameFont * 1.28));
+  context.font = '400 ' + bodyFont + 'px "Pangolin", "Segoe Print", cursive'; context.textAlign = 'left';
+  const textTop = namesTop + nameRows * nameFont * 1.28 + bodyFont * .85;
+  if (dual) {
+    leftLines.forEach((line, i) => context.fillText(line, textLeft, textTop + i * lineHeight));
+    rightLines.forEach((line, i) => context.fillText(line, textLeft + columnWidth + columnGap, textTop + i * lineHeight));
+  } else leftLines.forEach((line, i) => context.fillText(line, textLeft, textTop + i * lineHeight));
+  context.textAlign = 'center'; context.font = '400 ' + bodyFont * 1.55 + 'px "Pangolin", "Segoe Print", cursive';
+  context.fillText('✱', panelLeft + width - paddingX * .75, panelTop + panelHeight - paddingBottom * .38);
+  context.restore();
+}
 function drawLocationShade(context, left, top, width, titleFont, outputScale, leftCorner, topCorner) {
   const blur = 48 * outputScale, padding = Math.ceil(blur * 3);
   const layer = document.createElement('canvas'); layer.width = context.canvas.width + padding * 2; layer.height = context.canvas.height + padding * 2;
@@ -471,7 +519,9 @@ async function renderPng(item) {
   const s = item.settings, scale = s.scale / 100, fontBasis = Math.min(canvas.width, canvas.height), center = canvas.width * s.x / 100, centerY = canvas.height * s.position / 100;
   const width = canvas.width * s.width / 100, font = Math.max(14, fontBasis * .025) * scale;
   await document.fonts.ready;
-  if (s.showDialogue && s.dialogueMode !== 'dual') {
+  if (s.showDialogue && s.dialogueStyle === 'corpse-party') {
+    drawTornDialogue(context, s, width, fontBasis, scale, center, centerY);
+  } else if (s.showDialogue && s.dialogueMode !== 'dual') {
     context.textAlign = 'center'; context.textBaseline = 'middle';
     const bodyFont = Math.max(13, fontBasis * .021) * scale;
     context.font = '600 ' + bodyFont + 'px Georgia, serif';
@@ -488,7 +538,7 @@ async function renderPng(item) {
     context.save(); context.shadowColor = '#000'; context.shadowBlur = 5 * scale; context.strokeStyle = '#e2b942'; context.lineWidth = 1.5 * scale;
     context.translate(center, centerY + font * 2.2 + Math.max(0, lines.length - 1) * lineHeight); context.rotate(Math.PI / 4); context.strokeRect(-6 * scale, -6 * scale, 12 * scale, 12 * scale); context.restore();
   }
-  if (s.showDialogue && s.dialogueMode === 'dual') {
+  if (s.showDialogue && s.dialogueMode === 'dual' && s.dialogueStyle !== 'corpse-party') {
     const bodyFont = Math.max(13, fontBasis * .021) * scale, lineHeight = fontBasis * .029 * scale;
     const columnWidth = width * .46;
     context.font = '600 ' + bodyFont + 'px Georgia, serif';
@@ -668,7 +718,7 @@ ui.exportOne.addEventListener('click', exportCurrent); ui.copyOne.addEventListen
 for (const input of [ui.speakerInput, ui.speakerTwoInput, ui.speakerThreeInput]) input.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); ui.nameTarget = input; saveName(); } });
 ui.nameTarget = ui.speakerInput;
 for (const input of [ui.speakerInput, ui.speakerTwoInput, ui.speakerThreeInput]) input.addEventListener('focus', () => { ui.nameTarget = input; });
-for (const input of [ui.speakerInput, ui.dialogueInput, ui.locationInput, ui.subtitleInput, ui.speakerTwoInput, ui.speakerThreeInput, ui.dialogueTwoInput, ui.dialogueThreeInput, ui.dialogueMode, ui.locationCornerInput, ui.locationOffsetInput, ui.dialogueEnabled, ui.locationEnabled, ui.positionInput, ui.widthInput, ui.flourishInput]) input.addEventListener('input', () => refreshPreview());
+for (const input of [ui.speakerInput, ui.dialogueInput, ui.locationInput, ui.subtitleInput, ui.speakerTwoInput, ui.speakerThreeInput, ui.dialogueTwoInput, ui.dialogueThreeInput, ui.dialogueMode, ui.dialogueStyle, ui.locationCornerInput, ui.locationOffsetInput, ui.dialogueEnabled, ui.locationEnabled, ui.positionInput, ui.widthInput, ui.flourishInput]) input.addEventListener('input', () => refreshPreview());
 ui.scaleInput.addEventListener('input', () => syncScaleAcrossBatch());
 ui.scaleInput.addEventListener('change', () => syncScaleAcrossBatch(true));
 ui.resetPosition.addEventListener('click', () => { ui.positionInput.value = 84; refreshPreview(); });

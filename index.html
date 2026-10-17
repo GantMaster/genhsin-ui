@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#171714">
   <meta name="description" content="Локальная мастерская игровых диалогов поверх изображений.">
   <title>Искра — мастерская диалогов</title>
-  <link rel="stylesheet" href="./style.css?v=shared-scale-5">
-  <script src="./app.js?v=shared-scale-5" defer></script>
+  <link rel="stylesheet" href="./style.css?v=corpse-party-1">
+  <script src="./app.js?v=corpse-party-1" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -44,6 +44,8 @@
         <div class="group-fields" id="dialogueFields">
           <label class="mode-select-label" for="dialogueMode">ФОРМАТ СЦЕНЫ</label>
           <select id="dialogueMode" class="mode-select"><option value="single">Один персонаж</option><option value="dual">Два персонажа</option></select>
+          <label class="mode-select-label style-select-label" for="dialogueStyle">СТИЛЬ ДИАЛОГА</label>
+          <select id="dialogueStyle" class="mode-select"><option value="genshin">Genshin Impact</option><option value="corpse-party">Corpse Party</option></select>
           <div id="singleFields">
             <label class="field-label" for="speakerInput">ИМЯ ПЕРСОНАЖА</label>
             <div class="input-row"><input id="speakerInput" type="text" maxlength="36" placeholder="Например, Паймон" autocomplete="off"></div>
